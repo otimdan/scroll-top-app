@@ -25,7 +25,9 @@ export default function AdditionalPage() {
   function handleSave() {
     const data = {
       color: formState.color,
-      color2: formState.color2,
+      bg_color: formState.bg_color,
+      hover_color: formState.hover_color,
+      icon_color: formState.icon_color,
     };
 
     submit(data, { method: "post" });
@@ -48,14 +50,49 @@ export default function AdditionalPage() {
             </s-stack>
           </s-stack>
           <s-color-field
-            placeholder="Select a color"
-            name="color2"
-            value={formState.color2}
+            label="Button Background Color"
+            placeholder="#28A745"
+            name="bg-color"
+            value={formState.bg_color}
             error={error}
             onChange={(e) => {
               const newColor = e.currentTarget.value;
-              console.log("Color changed to:", newColor);
-              setFormState({ ...formState, color2: newColor });
+              console.log("Bg changed to:", newColor);
+              setFormState({ ...formState, bg_color: newColor });
+              setError(
+                /^#([0-9A-F]{3}){1,2}$/i.test(newColor)
+                  ? ""
+                  : "Please enter a valid color format",
+              );
+            }}
+          />
+          <s-color-field
+            label="Button Hover Color"
+            placeholder="#1C7530"
+            name="hover-color"
+            value={formState.hover_color}
+            error={error}
+            onChange={(e) => {
+              const newColor = e.currentTarget.value;
+              console.log("Hover changed to:", newColor);
+              setFormState({ ...formState, hover_color: newColor });
+              setError(
+                /^#([0-9A-F]{3}){1,2}$/i.test(newColor)
+                  ? ""
+                  : "Please enter a valid color format",
+              );
+            }}
+          />
+          <s-color-field
+            label="Button Icon Color"
+            placeholder="#1C7530"
+            name="icon-color"
+            value={formState.icon_color}
+            error={error}
+            onChange={(e) => {
+              const newColor = e.currentTarget.value;
+              console.log("Icon changed to:", newColor);
+              setFormState({ ...formState, icon_color: newColor });
               setError(
                 /^#([0-9A-F]{3}){1,2}$/i.test(newColor)
                   ? ""
@@ -68,6 +105,27 @@ export default function AdditionalPage() {
           </s-button>
         </form>
       </s-section>
+      <s-box slot="aside">
+        {/* === */}
+        {/* Puzzle summary */}
+        {/* === */}
+        <s-section heading="Puzzle summary">
+          <s-heading>Mountain view</s-heading>
+          <s-unordered-list>
+            <s-list-item>16-piece puzzle with medium difficulty</s-list-item>
+            <s-list-item>Pieces can be rotated</s-list-item>
+            <s-list-item>No time limit</s-list-item>
+            <s-list-item>
+              <s-stack direction="inline" gap="small">
+                <s-text>Current status:</s-text>
+                <s-badge color="base" tone="success">
+                  Active
+                </s-badge>
+              </s-stack>
+            </s-list-item>
+          </s-unordered-list>
+        </s-section>
+      </s-box>
     </s-page>
   );
 }
