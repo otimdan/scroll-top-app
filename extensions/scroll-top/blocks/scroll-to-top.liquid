@@ -1,7 +1,7 @@
 {% comment %}
-Scroll to Top Button Block (Read-Only)
-This block reads settings from the shop metafield set by the app.
-Merchants cannot edit these settings directly - use the app admin page instead.
+  Scroll to Top Button Block (Read-Only)
+  This block reads settings from the shop metafield set by the app.
+  Merchants cannot edit these settings directly - use the app admin page instead.
 {% endcomment %}
 
 {% assign settings_json = shop.metafields.scroll_top_app.settings.value | default: '{"bgColor":"#28A745","hoverColor":"#1C7530","iconColor":"#FFFFFF","buttonShape":"circle","buttonPosition":"right","showOnHome":false,"showOnProduct":false,"showOnCollection":false,"showOnAll":true}' %}
@@ -107,6 +107,7 @@ Merchants cannot edit these settings directly - use the app admin page instead.
 
 {% schema %}
 {
-  "name": "Scroll to Top Button (Read-Only - Managed by App)"
+  "name": "Scroll to Top",
+  "target": "section"
 }
 {% endschema %}

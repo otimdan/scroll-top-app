@@ -32,7 +32,8 @@ export async function action({ request }) {
     };
 
     // Save to shop metafield
-    const response = await admin.graphql(`
+    const response = await admin.graphql(
+      `
       mutation SetShopMetafield($input: ShopMetafieldsSetInput!) {
         shopMetafieldsSet(input: $input) {
           metafields {
@@ -47,20 +48,22 @@ export async function action({ request }) {
           }
         }
       }
-    `, {
-      variables: {
-        input: {
-          metafields: [
-            {
-              namespace: "scroll_top_app",
-              key: "settings",
-              type: "json",
-              value: JSON.stringify(settingsData),
-            }
-          ]
-        }
-      }
-    });
+    `,
+      {
+        variables: {
+          input: {
+            metafields: [
+              {
+                namespace: "scroll_top_app",
+                key: "settings",
+                type: "json",
+                value: JSON.stringify(settingsData),
+              },
+            ],
+          },
+        },
+      },
+    );
 
     const result = await response.json();
     console.log("Metafield save response:", result);
@@ -68,7 +71,7 @@ export async function action({ request }) {
     if (result.data?.shopMetafieldsSet?.userErrors?.length > 0) {
       return {
         success: false,
-        message: result.data.shopMetafieldsSet.userErrors[0].message
+        message: result.data.shopMetafieldsSet.userErrors[0].message,
       };
     }
 
@@ -100,7 +103,11 @@ export async function action({ request }) {
       },
     });
 
-    console.log("Settings saved to metafield and database for shop:", session.shop, settingsData);
+    console.log(
+      "Settings saved to metafield and database for shop:",
+      session.shop,
+      settingsData,
+    );
     return { success: true, message: "Settings saved successfully!" };
   } catch (error) {
     console.error("Error saving settings:", error);

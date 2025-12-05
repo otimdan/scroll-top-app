@@ -100,17 +100,20 @@ The block has a minimal schema with NO editable fields:
 ## Usage Steps
 
 ### Step 1: Configure in App Admin
+
 1. Go to your Shopify app → Form page
 2. Set colors, shape, position, pages
 3. Click **Save**
 4. Settings are saved to `shop.metafields.scroll_top_app.settings`
 
 ### Step 2: Add to Theme
+
 1. In theme editor, add **"Scroll to Top Button"** block to a section
 2. The block automatically loads settings from the metafield
 3. **Note:** No settings to configure - it's read-only!
 
 ### Step 3: Deploy
+
 ```bash
 shopify app deploy
 ```
@@ -134,12 +137,12 @@ extensions/scroll-top/
 
 ## Metafield Details
 
-| Property | Value |
-|----------|-------|
+| Property  | Value            |
+| --------- | ---------------- |
 | Namespace | `scroll_top_app` |
-| Key | `settings` |
-| Type | `json` |
-| Stored On | `Shop` resource |
+| Key       | `settings`       |
+| Type      | `json`           |
+| Stored On | `Shop` resource  |
 
 ### Metafield Value Structure
 
@@ -160,6 +163,7 @@ extensions/scroll-top/
 ## GraphQL Queries
 
 ### Read Metafield
+
 ```graphql
 query GetShopMetafield {
   shop {
@@ -172,6 +176,7 @@ query GetShopMetafield {
 ```
 
 ### Write Metafield
+
 ```graphql
 mutation SetShopMetafield($input: ShopMetafieldsSetInput!) {
   shopMetafieldsSet(input: $input) {
@@ -190,18 +195,22 @@ mutation SetShopMetafield($input: ShopMetafieldsSetInput!) {
 ## Troubleshooting
 
 ### Button not appearing?
+
 1. Verify settings saved in app admin
 2. Check theme extension is deployed
 3. Verify block is added to theme
 4. Check browser console for JS errors
 
 ### Settings not syncing?
+
 1. Confirm GraphQL mutation succeeded
 2. Check metafield namespace/key spelling
 3. Use GraphQL admin to verify metafield exists
 
 ### How to manually check metafield?
+
 In Shopify admin GraphQL, run:
+
 ```graphql
 {
   shop {
@@ -215,11 +224,13 @@ In Shopify admin GraphQL, run:
 ## Why This Approach?
 
 **Traditional Approach (Block Settings):**
+
 - ❌ Merchants can edit settings in theme editor
 - ❌ Inconsistent with app admin settings
 - ❌ Can override app settings by mistake
 
 **Metafield Approach:**
+
 - ✅ Single source of truth
 - ✅ Merchant-proof (read-only block)
 - ✅ Consistent across all stores
@@ -228,6 +239,7 @@ In Shopify admin GraphQL, run:
 ## Migration Notes
 
 If upgrading from the old approach:
+
 1. The metafield will be created on first save
 2. Database still stores settings as backup
 3. You can remove database dependency later if needed
