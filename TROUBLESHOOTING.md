@@ -5,6 +5,7 @@
 ### Solution 1: Using the Block (Recommended)
 
 **Steps:**
+
 1. Go to **Shopify Admin** → **Sales Channels** → **Online Store**
 2. Click **Customize** (or edit your theme)
 3. Go to **theme.liquid** or any section
@@ -36,7 +37,6 @@ The button will automatically appear with app settings.
 
 - [ ] **Did you add the block to a section?**
   - Block won't appear unless added to a section in theme editor
-  
 - [ ] **Or did you add the snippet to theme.liquid?**
   - Add before `</body>` tag: `{% render 'scroll-to-top' %}`
 
@@ -76,6 +76,7 @@ The button will automatically appear with app settings.
 ```
 
 **Expected response:**
+
 ```json
 {
   "data": {
@@ -96,6 +97,7 @@ If `metafield` is `null`, the settings haven't been saved yet.
 ## Default Settings (If Metafield Not Set)
 
 If button doesn't show because metafield isn't set, it uses defaults:
+
 - Background color: `#28A745` (green)
 - Hover color: `#1C7530` (darker green)
 - Icon color: `#FFFFFF` (white)
@@ -135,11 +137,13 @@ If button doesn't show because metafield isn't set, it uses defaults:
 **Try this diagnostic:**
 
 1. **Verify app is installed:**
+
    ```bash
    shopify app info
    ```
 
 2. **Check extension deployed:**
+
    ```bash
    shopify app deploy
    ```
@@ -149,6 +153,7 @@ If button doesn't show because metafield isn't set, it uses defaults:
    - Should return JSON with settings
 
 4. **Check logs:**
+
    ```bash
    shopify app logs
    ```
@@ -164,21 +169,25 @@ If button doesn't show because metafield isn't set, it uses defaults:
 ## Common Issues
 
 ### "Block not found in theme editor"
+
 - Extension not deployed: Run `shopify app deploy`
 - Wrong app not installed in dev store
 - Clear browser cache
 
 ### "Button appears but doesn't work"
+
 - JavaScript error in console
 - Check color values are valid hex
 - Verify scroll trigger (scroll > 300px)
 
 ### "Settings not updating"
+
 - Metafield not being saved
 - Check app.form.jsx action handler
 - Verify GraphQL mutation succeeds
 
 ### "Wrong colors showing"
+
 - Metafield has old values
 - Edit settings in app and save
 - Hard refresh browser (Cmd+Shift+R)
@@ -188,6 +197,7 @@ If button doesn't show because metafield isn't set, it uses defaults:
 ## Contact Support
 
 If still not working:
+
 1. Check browser console for errors
 2. Verify metafield is set (GraphQL query above)
 3. Check app logs: `shopify app logs`

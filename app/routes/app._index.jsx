@@ -5,7 +5,68 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }) => {
-  await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
+
+  try {
+    // Check if settings metafield exists
+    const checkResponse = await admin.graphql(`
+      query GetShopMetafield {
+        shop {
+          scrollTopSettings: metafield(namespace: "scroll_top_app", key: "settings") {
+            id
+          }
+        }
+      }
+    `);
+
+    const checkResult = await checkResponse.json();
+    const metafieldExists = checkResult.data?.shop?.scrollTopSettings?.id;
+
+    // If no metafield exists, create default settings
+    if (!metafieldExists) {
+      const defaultSettings = {
+        bgColor: "#28A745",
+        hoverColor: "#1C7530",
+        iconColor: "#FFFFFF",
+        buttonShape: "circle",
+        buttonPosition: "right",
+        showOnHome: false,
+        showOnProduct: false,
+        showOnCollection: false,
+        showOnAll: true,
+      };
+
+      await admin.graphql(
+        `
+        mutation SetShopMetafield($input: ShopMetafieldsSetInput!) {
+          shopMetafieldsSet(input: $input) {
+            metafields {
+              id
+            }
+          }
+        }
+      `,
+        {
+          variables: {
+            input: {
+              metafields: [
+                {
+                  namespace: "scroll_top_app",
+                  key: "settings",
+                  type: "json",
+                  value: JSON.stringify(defaultSettings),
+                },
+              ],
+            },
+          },
+        },
+      );
+
+      console.log("Default settings created for shop:", session.shop);
+    }
+  } catch (error) {
+    console.error("Error initializing default settings:", error);
+  }
 
   return null;
 };
