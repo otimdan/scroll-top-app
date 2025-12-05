@@ -1,7 +1,11 @@
 {% comment %}
 Scroll to Top Button Snippet
-Fetches settings from the Shopify app and renders the button
+Renders button with settings from shop metafield (set by the app)
+Add this to your theme.liquid just before closing </body> tag:
+  {% render 'scroll-to-top' %}
 {% endcomment %}
+
+{% assign settings = shop.metafields.scroll_top_app.settings.value | default: '{"bgColor":"#28A745","hoverColor":"#1C7530","iconColor":"#FFFFFF","buttonShape":"circle","buttonPosition":"right","showOnHome":false,"showOnProduct":false,"showOnCollection":false,"showOnAll":true}' %}
 
 <style>
   .scroll-to-top-button {
@@ -43,59 +47,36 @@ Fetches settings from the Shopify app and renders the button
 </style>
 
 <script>
-  // Default settings - will be overridden by app settings if available
-  const defaultSettings = {
-    bgColor: "#28A745",
-    hoverColor: "#1C7530",
-    iconColor: "#FFFFFF",
-    buttonShape: "circle",
-    buttonPosition: "right",
-    showOnHome: false,
-    showOnProduct: false,
-    showOnCollection: false,
-    showOnAll: true
-  };
+  // Settings from shop metafield
+  const buttonSettings = {{ settings | json }};
 
-  // Fetch settings from the app
-  async function fetchSettings() {
-    try {
-      const response = await fetch('/apps/scroll-top-app/settings');
-      if (response.ok) {
-        return await response.json();
-      }
-    } catch (error) {
-      console.error('Failed to fetch scroll-to-top settings:', error);
-    }
-    return defaultSettings;
-  }
-
-  function shouldShowButton(settings) {
+  function shouldShowButton() {
     const url = window.location.href;
     
-    if (settings.showOnAll) return true;
-    if (settings.showOnHome && url === window.location.origin + '/') return true;
-    if (settings.showOnProduct && url.includes('/products/')) return true;
-    if (settings.showOnCollection && url.includes('/collections/')) return true;
+    if (buttonSettings.showOnAll) return true;
+    if (buttonSettings.showOnHome && url === window.location.origin + '/') return true;
+    if (buttonSettings.showOnProduct && url.includes('/products/')) return true;
+    if (buttonSettings.showOnCollection && url.includes('/collections/')) return true;
     
     return false;
   }
 
-  function createScrollButton(settings) {
-    if (!shouldShowButton(settings)) return;
+  function createScrollButton() {
+    if (!shouldShowButton()) return;
 
     const button = document.createElement('button');
-    button.className = `scroll-to-top-button ${settings.buttonShape} ${settings.buttonPosition}`;
+    button.className = `scroll-to-top-button ${buttonSettings.buttonShape} ${buttonSettings.buttonPosition}`;
     button.innerHTML = '↑';
-    button.style.backgroundColor = settings.bgColor;
-    button.style.color = settings.iconColor;
+    button.style.backgroundColor = buttonSettings.bgColor;
+    button.style.color = buttonSettings.iconColor;
     button.setAttribute('aria-label', 'Scroll to top');
 
     button.addEventListener('mouseenter', function() {
-      this.style.backgroundColor = settings.hoverColor;
+      this.style.backgroundColor = buttonSettings.hoverColor;
     });
 
     button.addEventListener('mouseleave', function() {
-      this.style.backgroundColor = settings.bgColor;
+      this.style.backgroundColor = buttonSettings.bgColor;
     });
 
     button.addEventListener('click', function() {
@@ -118,14 +99,9 @@ Fetches settings from the Shopify app and renders the button
   }
 
   // Initialize button when DOM is ready
-  async function init() {
-    const settings = await fetchSettings();
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', () => createScrollButton(settings));
-    } else {
-      createScrollButton(settings);
-    }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', createScrollButton);
+  } else {
+    createScrollButton();
   }
-
-  init();
 </script>
