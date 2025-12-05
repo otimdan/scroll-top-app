@@ -16,37 +16,91 @@ export async function action({ request }) {
   }
 
   const formData = await request.formData();
-  const shop = session.shop;
 
   try {
+    // Prepare metafield data with all settings
+    const settingsData = {
+      bgColor: formData.get("bg_color") || "#28A745",
+      hoverColor: formData.get("hover_color") || "#1C7530",
+      iconColor: formData.get("icon_color") || "#FFFFFF",
+      buttonShape: formData.get("button_shape") || "circle",
+      buttonPosition: formData.get("button_position") || "right",
+      showOnHome: formData.get("show_on_home") === "true",
+      showOnProduct: formData.get("show_on_product") === "true",
+      showOnCollection: formData.get("show_on_collection") === "true",
+      showOnAll: formData.get("show_on_all") === "true",
+    };
+
+    // Save to shop metafield
+    const response = await admin.graphql(`
+      mutation SetShopMetafield($input: ShopMetafieldsSetInput!) {
+        shopMetafieldsSet(input: $input) {
+          metafields {
+            id
+            key
+            namespace
+            value
+          }
+          userErrors {
+            field
+            message
+          }
+        }
+      }
+    `, {
+      variables: {
+        input: {
+          metafields: [
+            {
+              namespace: "scroll_top_app",
+              key: "settings",
+              type: "json",
+              value: JSON.stringify(settingsData),
+            }
+          ]
+        }
+      }
+    });
+
+    const result = await response.json();
+    console.log("Metafield save response:", result);
+
+    if (result.data?.shopMetafieldsSet?.userErrors?.length > 0) {
+      return {
+        success: false,
+        message: result.data.shopMetafieldsSet.userErrors[0].message
+      };
+    }
+
+    // Also save to database for backup/reporting
     const settings = await prisma.scrollTopSettings.upsert({
-      where: { shop },
+      where: { shop: session.shop },
       update: {
-        bgColor: formData.get("bg_color"),
-        hoverColor: formData.get("hover_color"),
-        iconColor: formData.get("icon_color"),
-        buttonShape: formData.get("button_shape"),
-        buttonPosition: formData.get("button_position"),
-        showOnHome: formData.get("show_on_home") === "true",
-        showOnProduct: formData.get("show_on_product") === "true",
-        showOnCollection: formData.get("show_on_collection") === "true",
-        showOnAll: formData.get("show_on_all") === "true",
+        bgColor: settingsData.bgColor,
+        hoverColor: settingsData.hoverColor,
+        iconColor: settingsData.iconColor,
+        buttonShape: settingsData.buttonShape,
+        buttonPosition: settingsData.buttonPosition,
+        showOnHome: settingsData.showOnHome,
+        showOnProduct: settingsData.showOnProduct,
+        showOnCollection: settingsData.showOnCollection,
+        showOnAll: settingsData.showOnAll,
       },
       create: {
-        shop,
-        bgColor: formData.get("bg_color") || "#28A745",
-        hoverColor: formData.get("hover_color") || "#1C7530",
-        iconColor: formData.get("icon_color") || "#FFFFFF",
-        buttonShape: formData.get("button_shape") || "circle",
-        buttonPosition: formData.get("button_position") || "right",
-        showOnHome: formData.get("show_on_home") === "true",
-        showOnProduct: formData.get("show_on_product") === "true",
-        showOnCollection: formData.get("show_on_collection") === "true",
-        showOnAll: formData.get("show_on_all") === "true",
+        shop: session.shop,
+        bgColor: settingsData.bgColor,
+        hoverColor: settingsData.hoverColor,
+        iconColor: settingsData.iconColor,
+        buttonShape: settingsData.buttonShape,
+        buttonPosition: settingsData.buttonPosition,
+        showOnHome: settingsData.showOnHome,
+        showOnProduct: settingsData.showOnProduct,
+        showOnCollection: settingsData.showOnCollection,
+        showOnAll: settingsData.showOnAll,
       },
     });
 
-    console.log("Settings saved for shop:", shop, settings);
+    console.log("Settings saved to metafield and database for shop:", session.shop, settingsData);
     return { success: true, message: "Settings saved successfully!" };
   } catch (error) {
     console.error("Error saving settings:", error);

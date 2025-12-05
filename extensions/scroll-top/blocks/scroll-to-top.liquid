@@ -1,7 +1,10 @@
 {% comment %}
-Scroll to Top Button Block
-This block renders a customizable scroll-to-top button based on saved app settings
+Scroll to Top Button Block (Read-Only)
+This block reads settings from the shop metafield set by the app.
+Merchants cannot edit these settings directly - use the app admin page instead.
 {% endcomment %}
+
+{% assign settings_json = shop.metafields.scroll_top_app.settings.value | default: '{"bgColor":"#28A745","hoverColor":"#1C7530","iconColor":"#FFFFFF","buttonShape":"circle","buttonPosition":"right","showOnHome":false,"showOnProduct":false,"showOnCollection":false,"showOnAll":true}' %}
 
 <style>
   .scroll-to-top-button {
@@ -15,6 +18,7 @@ This block renders a customizable scroll-to-top button based on saved app settin
     width: 60px;
     height: 60px;
     padding: 0;
+    font-weight: bold;
   }
 
   .scroll-to-top-button.circle {
@@ -42,24 +46,14 @@ This block renders a customizable scroll-to-top button based on saved app settin
 </style>
 
 <script>
-  // Get settings from the Liquid template
-  const buttonSettings = {
-    bgColor: "{{ block.settings.bg_color }}",
-    hoverColor: "{{ block.settings.hover_color }}",
-    iconColor: "{{ block.settings.icon_color }}",
-    buttonShape: "{{ block.settings.button_shape }}",
-    buttonPosition: "{{ block.settings.button_position }}",
-    showOnHome: {{ block.settings.show_on_home | json }},
-    showOnProduct: {{ block.settings.show_on_product | json }},
-    showOnCollection: {{ block.settings.show_on_collection | json }},
-    showOnAll: {{ block.settings.show_on_all | json }}
-  };
+  // Settings are read from shop metafield (set by the app)
+  const buttonSettings = {{ settings_json | json }};
 
   function shouldShowButton() {
     const url = window.location.href;
     
     if (buttonSettings.showOnAll) return true;
-    if (buttonSettings.showOnHome && url.includes('/')) return true;
+    if (buttonSettings.showOnHome && url === window.location.origin + '/') return true;
     if (buttonSettings.showOnProduct && url.includes('/products/')) return true;
     if (buttonSettings.showOnCollection && url.includes('/collections/')) return true;
     
@@ -74,6 +68,7 @@ This block renders a customizable scroll-to-top button based on saved app settin
     button.innerHTML = '↑';
     button.style.backgroundColor = buttonSettings.bgColor;
     button.style.color = buttonSettings.iconColor;
+    button.setAttribute('aria-label', 'Scroll to top');
 
     button.addEventListener('mouseenter', function() {
       this.style.backgroundColor = buttonSettings.hoverColor;
@@ -112,83 +107,6 @@ This block renders a customizable scroll-to-top button based on saved app settin
 
 {% schema %}
 {
-  "name": "Scroll to Top Button",
-  "target": "section",
-  "settings": [
-    {
-      "type": "color",
-      "id": "bg_color",
-      "label": "Button Background Color",
-      "default": "#28A745"
-    },
-    {
-      "type": "color",
-      "id": "hover_color",
-      "label": "Button Hover Color",
-      "default": "#1C7530"
-    },
-    {
-      "type": "color",
-      "id": "icon_color",
-      "label": "Button Icon Color",
-      "default": "#FFFFFF"
-    },
-    {
-      "type": "select",
-      "id": "button_shape",
-      "label": "Button Shape",
-      "default": "circle",
-      "options": [
-        {
-          "value": "circle",
-          "label": "Circle"
-        },
-        {
-          "value": "square",
-          "label": "Square"
-        }
-      ]
-    },
-    {
-      "type": "select",
-      "id": "button_position",
-      "label": "Button Position",
-      "default": "right",
-      "options": [
-        {
-          "value": "right",
-          "label": "Right"
-        },
-        {
-          "value": "left",
-          "label": "Left"
-        }
-      ]
-    },
-    {
-      "type": "checkbox",
-      "id": "show_on_home",
-      "label": "Show on Home Page",
-      "default": false
-    },
-    {
-      "type": "checkbox",
-      "id": "show_on_product",
-      "label": "Show on Product Page",
-      "default": false
-    },
-    {
-      "type": "checkbox",
-      "id": "show_on_collection",
-      "label": "Show on Collection Page",
-      "default": false
-    },
-    {
-      "type": "checkbox",
-      "id": "show_on_all",
-      "label": "Show on All Pages",
-      "default": true
-    }
-  ]
+  "name": "Scroll to Top Button (Read-Only - Managed by App)"
 }
 {% endschema %}
