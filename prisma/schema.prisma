@@ -23,10 +23,26 @@ model Session {
   accessToken   String
   userId        BigInt?
   firstName     String?
-  lastName      String?
+  lastName     String?
   email         String?
   accountOwner  Boolean   @default(false)
   locale        String?
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
+}
+
+model ScrollTopSettings {
+  id                 String   @id @default(cuid())
+  shop               String   @unique
+  bgColor            String   @default("#28A745")
+  hoverColor         String   @default("#1C7530")
+  iconColor          String   @default("#FFFFFF")
+  buttonShape        String   @default("circle")
+  buttonPosition     String   @default("right")
+  showOnHome         Boolean  @default(false)
+  showOnProduct      Boolean  @default(false)
+  showOnCollection   Boolean  @default(false)
+  showOnAll          Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }

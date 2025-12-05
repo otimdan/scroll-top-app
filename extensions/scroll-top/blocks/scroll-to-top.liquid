@@ -1,0 +1,194 @@
+{% comment %}
+Scroll to Top Button Block
+This block renders a customizable scroll-to-top button based on saved app settings
+{% endcomment %}
+
+<style>
+  .scroll-to-top-button {
+    position: fixed;
+    z-index: 9999;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.3s ease;
+    display: none;
+    width: 60px;
+    height: 60px;
+    padding: 0;
+  }
+
+  .scroll-to-top-button.circle {
+    border-radius: 50%;
+  }
+
+  .scroll-to-top-button.square {
+    border-radius: 4px;
+  }
+
+  .scroll-to-top-button.right {
+    right: 20px;
+  }
+
+  .scroll-to-top-button.left {
+    left: 20px;
+  }
+
+  .scroll-to-top-button.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    bottom: 20px;
+  }
+</style>
+
+<script>
+  // Get settings from the Liquid template
+  const buttonSettings = {
+    bgColor: "{{ block.settings.bg_color }}",
+    hoverColor: "{{ block.settings.hover_color }}",
+    iconColor: "{{ block.settings.icon_color }}",
+    buttonShape: "{{ block.settings.button_shape }}",
+    buttonPosition: "{{ block.settings.button_position }}",
+    showOnHome: {{ block.settings.show_on_home | json }},
+    showOnProduct: {{ block.settings.show_on_product | json }},
+    showOnCollection: {{ block.settings.show_on_collection | json }},
+    showOnAll: {{ block.settings.show_on_all | json }}
+  };
+
+  function shouldShowButton() {
+    const url = window.location.href;
+    
+    if (buttonSettings.showOnAll) return true;
+    if (buttonSettings.showOnHome && url.includes('/')) return true;
+    if (buttonSettings.showOnProduct && url.includes('/products/')) return true;
+    if (buttonSettings.showOnCollection && url.includes('/collections/')) return true;
+    
+    return false;
+  }
+
+  function createScrollButton() {
+    if (!shouldShowButton()) return;
+
+    const button = document.createElement('button');
+    button.className = `scroll-to-top-button ${buttonSettings.buttonShape} ${buttonSettings.buttonPosition}`;
+    button.innerHTML = '↑';
+    button.style.backgroundColor = buttonSettings.bgColor;
+    button.style.color = buttonSettings.iconColor;
+
+    button.addEventListener('mouseenter', function() {
+      this.style.backgroundColor = buttonSettings.hoverColor;
+    });
+
+    button.addEventListener('mouseleave', function() {
+      this.style.backgroundColor = buttonSettings.bgColor;
+    });
+
+    button.addEventListener('click', function() {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    });
+
+    document.body.appendChild(button);
+
+    // Show/hide button on scroll
+    window.addEventListener('scroll', function() {
+      if (window.scrollY > 300) {
+        button.classList.add('show');
+      } else {
+        button.classList.remove('show');
+      }
+    });
+  }
+
+  // Initialize button when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', createScrollButton);
+  } else {
+    createScrollButton();
+  }
+</script>
+
+{% schema %}
+{
+  "name": "Scroll to Top Button",
+  "target": "section",
+  "settings": [
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "Button Background Color",
+      "default": "#28A745"
+    },
+    {
+      "type": "color",
+      "id": "hover_color",
+      "label": "Button Hover Color",
+      "default": "#1C7530"
+    },
+    {
+      "type": "color",
+      "id": "icon_color",
+      "label": "Button Icon Color",
+      "default": "#FFFFFF"
+    },
+    {
+      "type": "select",
+      "id": "button_shape",
+      "label": "Button Shape",
+      "default": "circle",
+      "options": [
+        {
+          "value": "circle",
+          "label": "Circle"
+        },
+        {
+          "value": "square",
+          "label": "Square"
+        }
+      ]
+    },
+    {
+      "type": "select",
+      "id": "button_position",
+      "label": "Button Position",
+      "default": "right",
+      "options": [
+        {
+          "value": "right",
+          "label": "Right"
+        },
+        {
+          "value": "left",
+          "label": "Left"
+        }
+      ]
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_home",
+      "label": "Show on Home Page",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_product",
+      "label": "Show on Product Page",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_collection",
+      "label": "Show on Collection Page",
+      "default": false
+    },
+    {
+      "type": "checkbox",
+      "id": "show_on_all",
+      "label": "Show on All Pages",
+      "default": true
+    }
+  ]
+}
+{% endschema %}

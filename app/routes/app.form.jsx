@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { useSubmit } from "react-router";
+import { useState, useEffect } from "react";
+import { useSubmit, useActionData } from "react-router";
 import { authenticate } from "../shopify.server";
+import prisma from "../db.server";
 
 export const loader = async ({ request }) => {
   await authenticate.admin(request);
@@ -8,34 +9,111 @@ export const loader = async ({ request }) => {
 };
 
 export async function action({ request }) {
-  await authenticate.admin(request);
-  const data = {
-    ...Object.fromEntries(await request.formData()),
-  };
+  const { admin, session } = await authenticate.admin(request);
 
-  console.log("Data is: " + JSON.stringify(data));
-  return null;
+  if (request.method !== "POST") {
+    return { error: "Invalid request method" };
+  }
+
+  const formData = await request.formData();
+  const shop = session.shop;
+
+  try {
+    const settings = await prisma.scrollTopSettings.upsert({
+      where: { shop },
+      update: {
+        bgColor: formData.get("bg_color"),
+        hoverColor: formData.get("hover_color"),
+        iconColor: formData.get("icon_color"),
+        buttonShape: formData.get("button_shape"),
+        buttonPosition: formData.get("button_position"),
+        showOnHome: formData.get("show_on_home") === "true",
+        showOnProduct: formData.get("show_on_product") === "true",
+        showOnCollection: formData.get("show_on_collection") === "true",
+        showOnAll: formData.get("show_on_all") === "true",
+      },
+      create: {
+        shop,
+        bgColor: formData.get("bg_color") || "#28A745",
+        hoverColor: formData.get("hover_color") || "#1C7530",
+        iconColor: formData.get("icon_color") || "#FFFFFF",
+        buttonShape: formData.get("button_shape") || "circle",
+        buttonPosition: formData.get("button_position") || "right",
+        showOnHome: formData.get("show_on_home") === "true",
+        showOnProduct: formData.get("show_on_product") === "true",
+        showOnCollection: formData.get("show_on_collection") === "true",
+        showOnAll: formData.get("show_on_all") === "true",
+      },
+    });
+
+    console.log("Settings saved for shop:", shop, settings);
+    return { success: true, message: "Settings saved successfully!" };
+  } catch (error) {
+    console.error("Error saving settings:", error);
+    return { success: false, message: "Failed to save settings" };
+  }
 }
 
 export default function AdditionalPage() {
   const submit = useSubmit();
+  const actionData = useActionData();
   const [formState, setFormState] = useState({});
   const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const [switches, setSwitches] = useState({
+    show_on_home: false,
+    show_on_product: false,
+    show_on_collection: false,
+    show_on_all: true,
+  });
+  const [selects, setSelects] = useState({
+    button_shape: "circle",
+    button_position: "right",
+  });
 
-  function handleSave() {
-    const data = {
+  useEffect(() => {
+    if (actionData?.success) {
+      setSuccessMessage("Settings saved successfully!");
+      setTimeout(() => setSuccessMessage(""), 3000);
+    }
+  }, [actionData]);
+
+  function handleSave(e) {
+    e.preventDefault();
+
+    const formData = new FormData();
+    formData.append("color", formState.color || "");
+    formData.append("bg_color", formState.bg_color || "");
+    formData.append("hover_color", formState.hover_color || "");
+    formData.append("icon_color", formState.icon_color || "");
+    formData.append("show_on_home", switches.show_on_home);
+    formData.append("show_on_product", switches.show_on_product);
+    formData.append("show_on_collection", switches.show_on_collection);
+    formData.append("show_on_all", switches.show_on_all);
+    formData.append("button_shape", selects.button_shape);
+    formData.append("button_position", selects.button_position);
+
+    console.log("Form data being submitted:", {
       color: formState.color,
       bg_color: formState.bg_color,
       hover_color: formState.hover_color,
       icon_color: formState.icon_color,
-    };
+      ...switches,
+      ...selects,
+    });
 
-    submit(data, { method: "post" });
+    setSuccessMessage("Saving settings...");
+    submit(formData, { method: "post" });
   }
 
   return (
     <s-page heading="Form page">
       <s-section>
+        {successMessage && (
+          <s-banner tone="success" title="Success">
+            {successMessage}
+          </s-banner>
+        )}
         <form onSubmit={handleSave}>
           <s-stack direction="inline" gap="base small">
             <s-stack>
@@ -100,6 +178,78 @@ export default function AdditionalPage() {
               );
             }}
           />
+          <s-stack gap="small-200">
+            <s-switch
+              id="show-on-home"
+              label="Show on Home Page"
+              checked={switches.show_on_home}
+              onChange={(e) =>
+                setSwitches({
+                  ...switches,
+                  show_on_home: e.currentTarget.checked,
+                })
+              }
+            />
+            <s-switch
+              id="show-on-product"
+              label="Show on Product Page"
+              checked={switches.show_on_product}
+              onChange={(e) =>
+                setSwitches({
+                  ...switches,
+                  show_on_product: e.currentTarget.checked,
+                })
+              }
+            />
+            <s-switch
+              id="show-on-collection"
+              label="Show on Collection Page"
+              checked={switches.show_on_collection}
+              onChange={(e) =>
+                setSwitches({
+                  ...switches,
+                  show_on_collection: e.currentTarget.checked,
+                })
+              }
+            />
+            <s-switch
+              id="show-on-all"
+              label="Show on All Pages"
+              checked={switches.show_on_all}
+              onChange={(e) =>
+                setSwitches({
+                  ...switches,
+                  show_on_all: e.currentTarget.checked,
+                })
+              }
+            />
+          </s-stack>
+          <s-select
+            label="Button Shape"
+            value={selects.button_shape}
+            onChange={(e) =>
+              setSelects({
+                ...selects,
+                button_shape: e.currentTarget.value,
+              })
+            }
+          >
+            <s-option value="circle">Circle</s-option>
+            <s-option value="square">Square</s-option>
+          </s-select>
+          <s-select
+            label="Button Position"
+            value={selects.button_position}
+            onChange={(e) =>
+              setSelects({
+                ...selects,
+                button_position: e.currentTarget.value,
+              })
+            }
+          >
+            <s-option value="right">Right</s-option>
+            <s-option value="left">Left</s-option>
+          </s-select>
           <s-button type="submit" variant="primary">
             Save
           </s-button>
@@ -107,23 +257,65 @@ export default function AdditionalPage() {
       </s-section>
       <s-box slot="aside">
         {/* === */}
-        {/* Puzzle summary */}
+        {/* Live Preview */}
         {/* === */}
-        <s-section heading="Puzzle summary">
-          <s-heading>Mountain view</s-heading>
-          <s-unordered-list>
-            <s-list-item>16-piece puzzle with medium difficulty</s-list-item>
-            <s-list-item>Pieces can be rotated</s-list-item>
-            <s-list-item>No time limit</s-list-item>
-            <s-list-item>
-              <s-stack direction="inline" gap="small">
-                <s-text>Current status:</s-text>
-                <s-badge color="base" tone="success">
-                  Active
-                </s-badge>
-              </s-stack>
-            </s-list-item>
-          </s-unordered-list>
+        <s-section heading="Live Preview">
+          <s-stack gap="base" justifyContent="center">
+            <s-text>Button Preview</s-text>
+            <button
+              style={{
+                backgroundColor: formState.bg_color || "#28A745",
+                color: formState.icon_color || "#FFFFFF",
+                padding: "12px 24px",
+                border: "none",
+                borderRadius: selects.button_shape === "circle" ? "50%" : "4px",
+                cursor: "pointer",
+                width: selects.button_shape === "circle" ? "60px" : "auto",
+                height: selects.button_shape === "circle" ? "60px" : "auto",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "18px",
+                transition: "all 0.3s ease",
+                position:
+                  selects.button_position === "left"
+                    ? "flex-start"
+                    : "flex-end",
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.backgroundColor =
+                  formState.hover_color || "#1C7530";
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.backgroundColor =
+                  formState.bg_color || "#28A745";
+              }}
+            >
+              ↑
+            </button>
+            <s-divider />
+            <s-stack direction="column" gap="small">
+              <s-text>
+                <strong>Settings:</strong>
+              </s-text>
+              <s-text>Shape: {selects.button_shape}</s-text>
+              <s-text>Position: {selects.button_position}</s-text>
+              <s-text>BG Color: {formState.bg_color || "#28A745"}</s-text>
+              <s-text>Hover Color: {formState.hover_color || "#1C7530"}</s-text>
+              <s-text>Icon Color: {formState.icon_color || "#FFFFFF"}</s-text>
+              <s-text>
+                Pages:{" "}
+                {[
+                  switches.show_on_home && "Home",
+                  switches.show_on_product && "Product",
+                  switches.show_on_collection && "Collection",
+                  switches.show_on_all && "All",
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+              </s-text>
+            </s-stack>
+          </s-stack>
         </s-section>
       </s-box>
     </s-page>

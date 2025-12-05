@@ -1,0 +1,131 @@
+{% comment %}
+Scroll to Top Button Snippet
+Fetches settings from the Shopify app and renders the button
+{% endcomment %}
+
+<style>
+  .scroll-to-top-button {
+    position: fixed;
+    z-index: 9999;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.3s ease;
+    display: none;
+    width: 60px;
+    height: 60px;
+    padding: 0;
+    font-weight: bold;
+  }
+
+  .scroll-to-top-button.circle {
+    border-radius: 50%;
+  }
+
+  .scroll-to-top-button.square {
+    border-radius: 4px;
+  }
+
+  .scroll-to-top-button.right {
+    right: 20px;
+  }
+
+  .scroll-to-top-button.left {
+    left: 20px;
+  }
+
+  .scroll-to-top-button.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    bottom: 20px;
+  }
+</style>
+
+<script>
+  // Default settings - will be overridden by app settings if available
+  const defaultSettings = {
+    bgColor: "#28A745",
+    hoverColor: "#1C7530",
+    iconColor: "#FFFFFF",
+    buttonShape: "circle",
+    buttonPosition: "right",
+    showOnHome: false,
+    showOnProduct: false,
+    showOnCollection: false,
+    showOnAll: true
+  };
+
+  // Fetch settings from the app
+  async function fetchSettings() {
+    try {
+      const response = await fetch('/apps/scroll-top-app/settings');
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (error) {
+      console.error('Failed to fetch scroll-to-top settings:', error);
+    }
+    return defaultSettings;
+  }
+
+  function shouldShowButton(settings) {
+    const url = window.location.href;
+    
+    if (settings.showOnAll) return true;
+    if (settings.showOnHome && url === window.location.origin + '/') return true;
+    if (settings.showOnProduct && url.includes('/products/')) return true;
+    if (settings.showOnCollection && url.includes('/collections/')) return true;
+    
+    return false;
+  }
+
+  function createScrollButton(settings) {
+    if (!shouldShowButton(settings)) return;
+
+    const button = document.createElement('button');
+    button.className = `scroll-to-top-button ${settings.buttonShape} ${settings.buttonPosition}`;
+    button.innerHTML = '↑';
+    button.style.backgroundColor = settings.bgColor;
+    button.style.color = settings.iconColor;
+    button.setAttribute('aria-label', 'Scroll to top');
+
+    button.addEventListener('mouseenter', function() {
+      this.style.backgroundColor = settings.hoverColor;
+    });
+
+    button.addEventListener('mouseleave', function() {
+      this.style.backgroundColor = settings.bgColor;
+    });
+
+    button.addEventListener('click', function() {
+      window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+      });
+    });
+
+    document.body.appendChild(button);
+
+    // Show/hide button on scroll
+    window.addEventListener('scroll', function() {
+      if (window.scrollY > 300) {
+        button.classList.add('show');
+      } else {
+        button.classList.remove('show');
+      }
+    });
+  }
+
+  // Initialize button when DOM is ready
+  async function init() {
+    const settings = await fetchSettings();
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => createScrollButton(settings));
+    } else {
+      createScrollButton(settings);
+    }
+  }
+
+  init();
+</script>
