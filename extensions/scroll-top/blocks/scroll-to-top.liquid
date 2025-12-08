@@ -1,113 +1,144 @@
-{% comment %}
-  Scroll to Top Button Block (Read-Only)
-  This block reads settings from the shop metafield set by the app.
-  Merchants cannot edit these settings directly - use the app admin page instead.
-{% endcomment %}
-
-{% assign settings_json = shop.metafields.scroll_top_app.settings.value | default: '{"bgColor":"#28A745","hoverColor":"#1C7530","iconColor":"#FFFFFF","buttonShape":"circle","buttonPosition":"right","showOnHome":false,"showOnProduct":false,"showOnCollection":false,"showOnAll":true}' %}
+{% comment %} {{ 'scroll-top.css' | asset_url | stylesheet_tag }} {% endcomment %}
+{% assign settings_value = shop.metafields.example_namespace.example_key.value | default: '{"bgColor":"#28A745","hoverColor":"#1C7530","iconColor":"#FFFFFF","buttonShape":"circle","buttonPosition":"right","showOnHome":false,"showOnProduct":false,"showOnCollection":false,"showOnAll":true}' %}
 
 <style>
-  .scroll-to-top-button {
+  .to-top {
+    background: transparent;
     position: fixed;
-    z-index: 9999;
-    border: none;
-    cursor: pointer;
-    font-size: 20px;
-    transition: all 0.3s ease;
-    display: none;
-    width: 60px;
-    height: 60px;
-    padding: 0;
-    font-weight: bold;
-  }
-
-  .scroll-to-top-button.circle {
+    bottom: 16px;
+    right: 32px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
-  }
-
-  .scroll-to-top-button.square {
-    border-radius: 4px;
-  }
-
-  .scroll-to-top-button.right {
-    right: 20px;
-  }
-
-  .scroll-to-top-button.left {
-    left: 20px;
-  }
-
-  .scroll-to-top-button.show {
     display: flex;
     align-items: center;
     justify-content: center;
-    bottom: 20px;
+    font-size: 32px;
+    text-decoration: none;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.4s;
+    z-index: 1000;
+    cursor: pointer;
+    border: none;
+  }
+
+  .to-top.active {
+    bottom: 32px;
+    pointer-events: auto;
+    opacity: 1;
+  }
+
+  .icon {
+    width: 1em;
+    height: 1em;
+    vertical-align: -0.125em;
+  }
+
+  .to-top:hover {
+    opacity: 0.9;
   }
 </style>
 
+<a href="#" class="to-top">
+  <svg
+    class="icon"
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 640 640"><!-- !Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc. -->
+<path d="M297.4 169.4C309.9 156.9 330.2 156.9 342.7 169.4L534.7 361.4C547.2 373.9 547.2 394.2 534.7 406.7C522.2 419.2 501.9 419.2 489.4 406.7L320 237.3L150.6 406.6C138.1 419.1 117.8 419.1 105.3 406.6C92.8 394.1 92.8 373.8 105.3 361.3L297.3 169.3z" /></svg>
+</a>
+
 <script>
-  // Settings are read from shop metafield (set by the app)
-  const buttonSettings = {{ settings_json | json }};
+  (function() {
+    // Default settings fallback
+    const defaultSettings = {
+      bgColor: "#28A745",
+      hoverColor: "#1C7530",
+      iconColor: "#FFFFFF",
+      buttonShape: "circle",
+      buttonPosition: "right",
+      showOnHome: false,
+      showOnProduct: false,
+      showOnCollection: false,
+      showOnAll: true
+    };
 
-  function shouldShowButton() {
-    const url = window.location.href;
+    // Parse settings from metafield JSON string
+    let settings = defaultSettings;
+    try {
+      const settingsJson = '{{ settings_value | json }}';
+      const parsed = JSON.parse(settingsJson);
+      settings = { ...defaultSettings, ...parsed };
+    } catch (error) {
+      console.error("Error parsing scroll-to-top settings:", error);
+    }
+
+    const toTop = document.querySelector(".to-top");
+    const icon = document.querySelector(".icon");
+
+    // Apply settings to button
+    toTop.style.backgroundColor = settings.bgColor;
+    icon.style.fill = settings.iconColor;
+    toTop.style.borderRadius = settings.buttonShape === "circle" ? "50%" : "12px";
     
-    if (buttonSettings.showOnAll) return true;
-    if (buttonSettings.showOnHome && url === window.location.origin + '/') return true;
-    if (buttonSettings.showOnProduct && url.includes('/products/')) return true;
-    if (buttonSettings.showOnCollection && url.includes('/collections/')) return true;
-    
-    return false;
-  }
+    // Set position
+    if (settings.buttonPosition === "right") {
+      toTop.style.right = "32px";
+      toTop.style.left = "auto";
+    } else if (settings.buttonPosition === "left") {
+      toTop.style.left = "32px";
+      toTop.style.right = "auto";
+    }
 
-  function createScrollButton() {
-    if (!shouldShowButton()) return;
+    // Store hover color for hover event
+    const hoverColor = settings.hoverColor;
+    const bgColor = settings.bgColor;
 
-    const button = document.createElement('button');
-    button.className = `scroll-to-top-button ${buttonSettings.buttonShape} ${buttonSettings.buttonPosition}`;
-    button.innerHTML = '↑';
-    button.style.backgroundColor = buttonSettings.bgColor;
-    button.style.color = buttonSettings.iconColor;
-    button.setAttribute('aria-label', 'Scroll to top');
-
-    button.addEventListener('mouseenter', function() {
-      this.style.backgroundColor = buttonSettings.hoverColor;
+    toTop.addEventListener("mouseenter", () => {
+      toTop.style.backgroundColor = hoverColor;
     });
 
-    button.addEventListener('mouseleave', function() {
-      this.style.backgroundColor = buttonSettings.bgColor;
+    toTop.addEventListener("mouseleave", () => {
+      toTop.style.backgroundColor = bgColor;
     });
 
-    button.addEventListener('click', function() {
-      window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
-    });
+    // Determine if button should show based on page type
+    function shouldShowButton() {
+      if (settings.showOnAll) return true;
+      
+      const url = window.location.href;
+      if (settings.showOnHome && url === window.location.origin + "/") return true;
+      if (settings.showOnProduct && url.includes("/products/")) return true;
+      if (settings.showOnCollection && url.includes("/collections/")) return true;
+      
+      return false;
+    }
 
-    document.body.appendChild(button);
+    if (!shouldShowButton()) {
+      toTop.style.display = "none";
+    }
 
-    // Show/hide button on scroll
-    window.addEventListener('scroll', function() {
-      if (window.scrollY > 300) {
-        button.classList.add('show');
+    // Show/hide on scroll
+    window.addEventListener("scroll", () => {
+      if (window.pageYOffset > 300) {
+        toTop.classList.add("active");
       } else {
-        button.classList.remove('show');
+        toTop.classList.remove("active");
       }
     });
-  }
 
-  // Initialize button when DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', createScrollButton);
-  } else {
-    createScrollButton();
-  }
+    // Smooth scroll to top on click
+    toTop.addEventListener("click", (e) => {
+      e.preventDefault();
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+    });
+  })();
 </script>
 
 {% schema %}
-{
-  "name": "Scroll to Top",
-  "target": "body"
-}
+  {"name": "Scroll to Top", "target": "body"}
+
 {% endschema %}

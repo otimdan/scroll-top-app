@@ -138,7 +138,7 @@ export async function action({ request }) {
     }
 
     // Also save to database for backup/reporting
-    const settings = await prisma.scrollTopSettings.upsert({
+    await prisma.scrollTopSettings.upsert({
       where: { shop: session.shop },
       update: {
         bgColor: settingsData.bgColor,
@@ -205,7 +205,6 @@ export default function AdditionalPage() {
     e.preventDefault();
 
     const formData = new FormData();
-    formData.append("color", formState.color || "");
     formData.append("bg_color", formState.bg_color || "");
     formData.append("hover_color", formState.hover_color || "");
     formData.append("icon_color", formState.icon_color || "");
@@ -217,7 +216,6 @@ export default function AdditionalPage() {
     formData.append("button_position", selects.button_position);
 
     console.log("Form data being submitted:", {
-      color: formState.color,
       bg_color: formState.bg_color,
       hover_color: formState.hover_color,
       icon_color: formState.icon_color,
@@ -238,144 +236,136 @@ export default function AdditionalPage() {
           </s-banner>
         )}
         <form onSubmit={handleSave}>
-          <s-stack direction="inline" gap="base small">
-            <s-stack>
-              <s-text-field
-                label="color"
-                name="color"
-                value={formState.color}
-                onInput={(e) =>
-                  setFormState({ ...formState, color: e.target.value })
+          <s-stack gap="base large">
+            <s-color-field
+              label="Button Background Color"
+              placeholder="#28A745"
+              name="bg_color"
+              value={formState.bg_color}
+              error={error}
+              onChange={(e) => {
+                const newColor = e.currentTarget.value;
+                console.log("Bg changed to:", newColor);
+                setFormState({ ...formState, bg_color: newColor });
+                setError(
+                  /^#([0-9A-F]{3}){1,2}$/i.test(newColor)
+                    ? ""
+                    : "Please enter a valid color format",
+                );
+              }}
+            />
+            <s-color-field
+              label="Button Hover Color"
+              placeholder="#1C7530"
+              name="hover_color"
+              value={formState.hover_color}
+              error={error}
+              onChange={(e) => {
+                const newColor = e.currentTarget.value;
+                console.log("Hover changed to:", newColor);
+                setFormState({ ...formState, hover_color: newColor });
+                setError(
+                  /^#([0-9A-F]{3}){1,2}$/i.test(newColor)
+                    ? ""
+                    : "Please enter a valid color format",
+                );
+              }}
+            />
+            <s-color-field
+              label="Button Icon Color"
+              placeholder="#FFFFFF"
+              name="icon_color"
+              value={formState.icon_color}
+              error={error}
+              onChange={(e) => {
+                const newColor = e.currentTarget.value;
+                console.log("Icon changed to:", newColor);
+                setFormState({ ...formState, icon_color: newColor });
+                setError(
+                  /^#([0-9A-F]{3}){1,2}$/i.test(newColor)
+                    ? ""
+                    : "Please enter a valid color format",
+                );
+              }}
+            />
+            <s-stack gap="small-200">
+              <s-switch
+                id="show-on-home"
+                label="Show on Home Page"
+                checked={switches.show_on_home}
+                onChange={(e) =>
+                  setSwitches({
+                    ...switches,
+                    show_on_home: e.currentTarget.checked,
+                  })
+                }
+              />
+              <s-switch
+                id="show-on-product"
+                label="Show on Product Page"
+                checked={switches.show_on_product}
+                onChange={(e) =>
+                  setSwitches({
+                    ...switches,
+                    show_on_product: e.currentTarget.checked,
+                  })
+                }
+              />
+              <s-switch
+                id="show-on-collection"
+                label="Show on Collection Page"
+                checked={switches.show_on_collection}
+                onChange={(e) =>
+                  setSwitches({
+                    ...switches,
+                    show_on_collection: e.currentTarget.checked,
+                  })
+                }
+              />
+              <s-switch
+                id="show-on-all"
+                label="Show on All Pages"
+                checked={switches.show_on_all}
+                onChange={(e) =>
+                  setSwitches({
+                    ...switches,
+                    show_on_all: e.currentTarget.checked,
+                  })
                 }
               />
             </s-stack>
+            <s-select
+              label="Button Shape"
+              value={selects.button_shape}
+              onChange={(e) =>
+                setSelects({
+                  ...selects,
+                  button_shape: e.currentTarget.value,
+                })
+              }
+            >
+              <s-option value="circle">Circle</s-option>
+              <s-option value="square">Square</s-option>
+            </s-select>
+            <s-select
+              label="Button Position"
+              value={selects.button_position}
+              onChange={(e) =>
+                setSelects({
+                  ...selects,
+                  button_position: e.currentTarget.value,
+                })
+              }
+            >
+              <s-option value="right">Right</s-option>
+              <s-option value="left">Left</s-option>
+            </s-select>
+            <s-stack alignItems="center">
+              <s-button type="submit" variant="primary">
+                Save
+              </s-button>
+            </s-stack>
           </s-stack>
-          <s-color-field
-            label="Button Background Color"
-            placeholder="#28A745"
-            name="bg-color"
-            value={formState.bg_color}
-            error={error}
-            onChange={(e) => {
-              const newColor = e.currentTarget.value;
-              console.log("Bg changed to:", newColor);
-              setFormState({ ...formState, bg_color: newColor });
-              setError(
-                /^#([0-9A-F]{3}){1,2}$/i.test(newColor)
-                  ? ""
-                  : "Please enter a valid color format",
-              );
-            }}
-          />
-          <s-color-field
-            label="Button Hover Color"
-            placeholder="#1C7530"
-            name="hover-color"
-            value={formState.hover_color}
-            error={error}
-            onChange={(e) => {
-              const newColor = e.currentTarget.value;
-              console.log("Hover changed to:", newColor);
-              setFormState({ ...formState, hover_color: newColor });
-              setError(
-                /^#([0-9A-F]{3}){1,2}$/i.test(newColor)
-                  ? ""
-                  : "Please enter a valid color format",
-              );
-            }}
-          />
-          <s-color-field
-            label="Button Icon Color"
-            placeholder="#1C7530"
-            name="icon-color"
-            value={formState.icon_color}
-            error={error}
-            onChange={(e) => {
-              const newColor = e.currentTarget.value;
-              console.log("Icon changed to:", newColor);
-              setFormState({ ...formState, icon_color: newColor });
-              setError(
-                /^#([0-9A-F]{3}){1,2}$/i.test(newColor)
-                  ? ""
-                  : "Please enter a valid color format",
-              );
-            }}
-          />
-          <s-stack gap="small-200">
-            <s-switch
-              id="show-on-home"
-              label="Show on Home Page"
-              checked={switches.show_on_home}
-              onChange={(e) =>
-                setSwitches({
-                  ...switches,
-                  show_on_home: e.currentTarget.checked,
-                })
-              }
-            />
-            <s-switch
-              id="show-on-product"
-              label="Show on Product Page"
-              checked={switches.show_on_product}
-              onChange={(e) =>
-                setSwitches({
-                  ...switches,
-                  show_on_product: e.currentTarget.checked,
-                })
-              }
-            />
-            <s-switch
-              id="show-on-collection"
-              label="Show on Collection Page"
-              checked={switches.show_on_collection}
-              onChange={(e) =>
-                setSwitches({
-                  ...switches,
-                  show_on_collection: e.currentTarget.checked,
-                })
-              }
-            />
-            <s-switch
-              id="show-on-all"
-              label="Show on All Pages"
-              checked={switches.show_on_all}
-              onChange={(e) =>
-                setSwitches({
-                  ...switches,
-                  show_on_all: e.currentTarget.checked,
-                })
-              }
-            />
-          </s-stack>
-          <s-select
-            label="Button Shape"
-            value={selects.button_shape}
-            onChange={(e) =>
-              setSelects({
-                ...selects,
-                button_shape: e.currentTarget.value,
-              })
-            }
-          >
-            <s-option value="circle">Circle</s-option>
-            <s-option value="square">Square</s-option>
-          </s-select>
-          <s-select
-            label="Button Position"
-            value={selects.button_position}
-            onChange={(e) =>
-              setSelects({
-                ...selects,
-                button_position: e.currentTarget.value,
-              })
-            }
-          >
-            <s-option value="right">Right</s-option>
-            <s-option value="left">Left</s-option>
-          </s-select>
-          <s-button type="submit" variant="primary">
-            Save
-          </s-button>
         </form>
       </s-section>
       <s-box slot="aside">
@@ -414,7 +404,17 @@ export default function AdditionalPage() {
                   formState.bg_color || "#28A745";
               }}
             >
-              ↑
+              <svg
+                style={{
+                  width: "3em",
+                  height: "3em",
+                  verticalAlign: "-0.125em",
+                }}
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 640 640"
+              >
+                <path d="M297.4 169.4C309.9 156.9 330.2 156.9 342.7 169.4L534.7 361.4C547.2 373.9 547.2 394.2 534.7 406.7C522.2 419.2 501.9 419.2 489.4 406.7L320 237.3L150.6 406.6C138.1 419.1 117.8 419.1 105.3 406.6C92.8 394.1 92.8 373.8 105.3 361.3L297.3 169.3z" />
+              </svg>
             </button>
             <s-divider />
             <s-stack direction="column" gap="small">
