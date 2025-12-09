@@ -51,23 +51,21 @@ export const isAppEmbedActive = async (admin) => {
     for (const blockId of Object.keys(blocks)) {
       const block = blocks[blockId];
       console.log("Checking block:", block.type);
-      if (
-        block?.type?.includes(appHandle) ||
-        block?.type?.includes("scroll-top-app")
-      ) {
+      if (block?.type?.includes(appHandle)) {
         console.log("Found matching block! Disabled status:", block.disabled);
+        console.log("Block:", block);
         return block.disabled === true;
       }
     }
 
     // If we never found our block, assume disabled.
     console.log("No matching block found");
-    return true;
+    return false;
   };
 
   const themeID = await getMainThemeID();
 
-  return !isAppEmbedDisabled(await getSettingsData(themeID), "scroll-to-top");
+  return !isAppEmbedDisabled(await getSettingsData(themeID), "scrolltop-app");
   /* 
   End of app embed check functions
    */

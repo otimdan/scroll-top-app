@@ -1,31 +1,58 @@
 import { useState, useEffect } from "react";
-import { useSubmit, useActionData } from "react-router";
+import { useSubmit, useActionData, useLoaderData } from "react-router";
 import { authenticate } from "../shopify.server";
-import prisma from "../db.server";
+import { useAppBridge } from "@shopify/app-bridge-react";
+import { GET_METAFIELD_DEFINITIONS } from "../graphql/queries/getMetafieldDefinitions.js";
+import { GET_METAFIELD_DEFINITION } from "../graphql/queries/getMetafieldDefinition.js";
+import { CREATE_SHOP_METAFIELD } from "../graphql/mutations/createShopMetafield.js";
+import { SET_SHOP_METAFIELD } from "../graphql/mutations/setShopMetafield.js";
+import { GET_SHOP_ID } from "../graphql/queries/getShopId.js";
 
 export const loader = async ({ request }) => {
-  const { admin, session } = await authenticate.admin(request);
+  const { admin } = await authenticate.admin(request);
 
   try {
     // Check if settings metafield exists
-    const checkResponse = await admin.graphql(`
-      query GetShopMetafield {
-        shop {
-          scrollTopSettings: metafield(namespace: "scroll_top_app", key: "settings") {
-            id
-          }
-        }
-      }
-    `);
-
-    const checkResult = await checkResponse.json();
-    const metafieldExists = checkResult.data?.shop?.scrollTopSettings?.id;
+    //Fetch metafield definitions
+    const MetaFieldresponse = await admin.graphql(GET_METAFIELD_DEFINITIONS, {
+      variables: {
+        ownerType: "SHOP",
+        first: 250,
+      },
+    });
+    const json = await MetaFieldresponse.json();
+    //   Check if "scrolling_settings" metafield definition exists
+    const metafieldExists = json.data?.metafieldDefinitions?.nodes;
+    const exists = metafieldExists.some(
+      (definition) => definition.name === "scrolling_settings",
+    );
 
     // If no metafield exists, create default settings
-    if (!metafieldExists) {
+    if (!exists) {
+      //   define a metafield
+      const DefineMetafieldresponse = await admin.graphql(
+        CREATE_SHOP_METAFIELD,
+        {
+          variables: {
+            definition: {
+              name: "scrolling_settings",
+              namespace: "scrolling",
+              key: "scrolling_test",
+              description: "Dummy metafield definition for name",
+              type: "json",
+              ownerType: "SHOP",
+            },
+          },
+        },
+      );
+
+      const defineMetafieldjson = await DefineMetafieldresponse.json();
+      console.log("Define Metafield Response:", defineMetafieldjson.data);
+
+      // Set metafield data
       const defaultSettings = {
-        bgColor: "#28A745",
-        hoverColor: "#1C7530",
+        bgColor: "#222222",
+        hoverColor: "#635b5b",
         iconColor: "#FFFFFF",
         buttonShape: "circle",
         buttonPosition: "right",
@@ -35,39 +62,54 @@ export const loader = async ({ request }) => {
         showOnAll: true,
       };
 
-      await admin.graphql(
-        `
-        mutation SetShopMetafield($input: ShopMetafieldsSetInput!) {
-          shopMetafieldsSet(input: $input) {
-            metafields {
-              id
-            }
-          }
-        }
-      `,
-        {
-          variables: {
-            input: {
-              metafields: [
-                {
-                  namespace: "scroll_top_app",
-                  key: "settings",
-                  type: "json",
-                  value: JSON.stringify(defaultSettings),
-                },
-              ],
-            },
-          },
-        },
-      );
+      // Shop Id
+      const shopResponse = await admin.graphql(GET_SHOP_ID);
+      const shopJson = await shopResponse.json();
+      console.log("Shop ID:", shopJson.data.shop.id);
 
-      console.log("Default settings created for shop:", session.shop);
+      const SetMetafieldresponse = await admin.graphql(SET_SHOP_METAFIELD, {
+        variables: {
+          metafields: [
+            {
+              key: "scrolling_test",
+              namespace: "scrolling",
+              ownerId: shopJson.data.shop.id,
+              type: "json",
+              value: JSON.stringify(defaultSettings),
+            },
+          ],
+        },
+      });
+      const SetMetafieldjson = await SetMetafieldresponse.json();
+      console.log(
+        "Set Metafield Response:",
+        SetMetafieldjson.data.metafieldsSet,
+      );
     }
   } catch (error) {
     console.error("Error initializing settings:", error);
   }
 
-  return null;
+  // Data to fill in form as placeholder
+  // This takes any metafield value available whether on fresh start or already avaible and just here for editing existing
+  const GetMetafieldValue = await admin.graphql(GET_METAFIELD_DEFINITION, {
+    variables: {
+      first: 5,
+      identifier: {
+        ownerType: "SHOP",
+        namespace: "scrolling",
+        key: "scrolling_test",
+      },
+    },
+  });
+  const metafieldJson = await GetMetafieldValue.json();
+  // Remember value is returned as a string regardless of type
+  const metafieldValue =
+    metafieldJson.data.metafieldDefinition.metafields.nodes[0].value;
+  // Turn metafield value from string to object
+  const settings = JSON.parse(metafieldValue);
+
+  return settings;
 };
 
 export async function action({ request }) {
@@ -82,8 +124,8 @@ export async function action({ request }) {
   try {
     // Prepare metafield data with all settings
     const settingsData = {
-      bgColor: formData.get("bg_color") || "#28A745",
-      hoverColor: formData.get("hover_color") || "#1C7530",
+      bgColor: formData.get("bg_color") || "#222222",
+      hoverColor: formData.get("hover_color") || "#635b5b",
       iconColor: formData.get("icon_color") || "#FFFFFF",
       buttonShape: formData.get("button_shape") || "circle",
       buttonPosition: formData.get("button_position") || "right",
@@ -93,77 +135,55 @@ export async function action({ request }) {
       showOnAll: formData.get("show_on_all") === "true",
     };
 
+    // Shop Id
+    const shopResponse = await admin.graphql(GET_SHOP_ID);
+    const shopJson = await shopResponse.json();
+    console.log("Shop ID:", shopJson.data.shop.id);
     // Save to shop metafield
-    const response = await admin.graphql(
-      `
-      mutation SetShopMetafield($input: ShopMetafieldsSetInput!) {
-        shopMetafieldsSet(input: $input) {
-          metafields {
-            id
-            key
-            namespace
-            value
-          }
-          userErrors {
-            field
-            message
-          }
-        }
-      }
-    `,
-      {
-        variables: {
-          input: {
-            metafields: [
-              {
-                namespace: "scroll_top_app",
-                key: "settings",
-                type: "json",
-                value: JSON.stringify(settingsData),
-              },
-            ],
+    const response = await admin.graphql(SET_SHOP_METAFIELD, {
+      variables: {
+        metafields: [
+          {
+            key: "scrolling_test",
+            namespace: "scrolling",
+            ownerId: shopJson.data.shop.id,
+            type: "json",
+            value: JSON.stringify(settingsData),
           },
-        },
-      },
-    );
-
-    const result = await response.json();
-    console.log("Metafield save response:", result);
-
-    if (result.data?.shopMetafieldsSet?.userErrors?.length > 0) {
-      return {
-        success: false,
-        message: result.data.shopMetafieldsSet.userErrors[0].message,
-      };
-    }
-
-    // Also save to database for backup/reporting
-    await prisma.scrollTopSettings.upsert({
-      where: { shop: session.shop },
-      update: {
-        bgColor: settingsData.bgColor,
-        hoverColor: settingsData.hoverColor,
-        iconColor: settingsData.iconColor,
-        buttonShape: settingsData.buttonShape,
-        buttonPosition: settingsData.buttonPosition,
-        showOnHome: settingsData.showOnHome,
-        showOnProduct: settingsData.showOnProduct,
-        showOnCollection: settingsData.showOnCollection,
-        showOnAll: settingsData.showOnAll,
-      },
-      create: {
-        shop: session.shop,
-        bgColor: settingsData.bgColor,
-        hoverColor: settingsData.hoverColor,
-        iconColor: settingsData.iconColor,
-        buttonShape: settingsData.buttonShape,
-        buttonPosition: settingsData.buttonPosition,
-        showOnHome: settingsData.showOnHome,
-        showOnProduct: settingsData.showOnProduct,
-        showOnCollection: settingsData.showOnCollection,
-        showOnAll: settingsData.showOnAll,
+        ],
       },
     });
+
+    const result = await response.json();
+    console.log("Metafield save response:", result.data.metafieldsSet);
+
+    // Also save to database for backup/reporting
+    // await prisma.scrollTopSettings.upsert({
+    //   where: { shop: session.shop },
+    //   update: {
+    //     bgColor: settingsData.bgColor,
+    //     hoverColor: settingsData.hoverColor,
+    //     iconColor: settingsData.iconColor,
+    //     buttonShape: settingsData.buttonShape,
+    //     buttonPosition: settingsData.buttonPosition,
+    //     showOnHome: settingsData.showOnHome,
+    //     showOnProduct: settingsData.showOnProduct,
+    //     showOnCollection: settingsData.showOnCollection,
+    //     showOnAll: settingsData.showOnAll,
+    //   },
+    //   create: {
+    //     shop: session.shop,
+    //     bgColor: settingsData.bgColor,
+    //     hoverColor: settingsData.hoverColor,
+    //     iconColor: settingsData.iconColor,
+    //     buttonShape: settingsData.buttonShape,
+    //     buttonPosition: settingsData.buttonPosition,
+    //     showOnHome: settingsData.showOnHome,
+    //     showOnProduct: settingsData.showOnProduct,
+    //     showOnCollection: settingsData.showOnCollection,
+    //     showOnAll: settingsData.showOnAll,
+    //   },
+    // });
 
     console.log(
       "Settings saved to metafield and database for shop:",
@@ -173,33 +193,76 @@ export async function action({ request }) {
     return { success: true, message: "Settings saved successfully!" };
   } catch (error) {
     console.error("Error saving settings:", error);
-    return { success: false, message: "Failed to save settings" };
   }
 }
 
-export default function AdditionalPage() {
+export default function FormPage() {
+  const shopify = useAppBridge();
   const submit = useSubmit();
+  const settings = useLoaderData();
+  console.log("Loaded settings:", settings);
   const actionData = useActionData();
-  const [formState, setFormState] = useState({});
+  // Initialize state from loaded settings with proper mapping
+  const [formState, setFormState] = useState({
+    bg_color: settings?.bgColor || "#222222",
+    hover_color: settings?.hoverColor || "#635b5b",
+    icon_color: settings?.iconColor || "#FFFFFF",
+  });
+  console.log("Form state initialized to:", formState);
   const [error, setError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  // const [successMessage, setSuccessMessage] = useState("");
   const [switches, setSwitches] = useState({
-    show_on_home: false,
-    show_on_product: false,
-    show_on_collection: false,
-    show_on_all: true,
+    show_on_home: settings?.showOnHome || false,
+    show_on_product: settings?.showOnProduct || false,
+    show_on_collection: settings?.showOnCollection || false,
+    show_on_all: settings?.showOnAll || true,
   });
+
   const [selects, setSelects] = useState({
-    button_shape: "circle",
-    button_position: "right",
+    button_shape: settings?.buttonShape || "circle",
+    button_position: settings?.buttonPosition || "right",
   });
+
+  // Update state when settings change (e.g., after navigation)
+  useEffect(() => {
+    if (settings) {
+      setFormState({
+        bg_color: settings.bgColor || "#222222",
+        hover_color: settings.hoverColor || "#635b5b",
+        icon_color: settings.iconColor || "#FFFFFF",
+      });
+      setSwitches({
+        show_on_home: settings.showOnHome || false,
+        show_on_product: settings.showOnProduct || false,
+        show_on_collection: settings.showOnCollection || false,
+        show_on_all: settings.showOnAll || true,
+      });
+      setSelects({
+        button_shape: settings.buttonShape || "circle",
+        button_position: settings.buttonPosition || "right",
+      });
+    }
+  }, [settings]);
+
+  // useEffect(() => {
+  //   if (actionData?.success) {
+  //     setSuccessMessage("Settings saved successfully!");
+  //     setTimeout(() => setSuccessMessage(""), 3000);
+  //   }
+  // }, [actionData]);
 
   useEffect(() => {
     if (actionData?.success) {
-      setSuccessMessage("Settings saved successfully!");
-      setTimeout(() => setSuccessMessage(""), 3000);
+      shopify.toast.show("Settings saved successfully!", {
+        duration: 3000,
+      });
+    } else if (actionData?.error) {
+      shopify.toast.show(actionData.error, {
+        duration: 3000,
+        isError: true,
+      });
     }
-  }, [actionData]);
+  }, [actionData, shopify]);
 
   function handleSave(e) {
     e.preventDefault();
@@ -223,23 +286,23 @@ export default function AdditionalPage() {
       ...selects,
     });
 
-    setSuccessMessage("Saving settings...");
+    // setSuccessMessage("Saving settings...");
     submit(formData, { method: "post" });
   }
 
   return (
     <s-page heading="Form page">
       <s-section>
-        {successMessage && (
+        {/* {successMessage && (
           <s-banner tone="success" title="Success">
             {successMessage}
           </s-banner>
-        )}
-        <form onSubmit={handleSave}>
+        )} */}
+        <form onSubmit={handleSave} data-save-bar>
           <s-stack gap="base large">
             <s-color-field
               label="Button Background Color"
-              placeholder="#28A745"
+              placeholder={formState.bg_color}
               name="bg_color"
               value={formState.bg_color}
               error={error}
@@ -256,7 +319,7 @@ export default function AdditionalPage() {
             />
             <s-color-field
               label="Button Hover Color"
-              placeholder="#1C7530"
+              placeholder={formState.hover_color}
               name="hover_color"
               value={formState.hover_color}
               error={error}
@@ -273,7 +336,7 @@ export default function AdditionalPage() {
             />
             <s-color-field
               label="Button Icon Color"
-              placeholder="#FFFFFF"
+              placeholder={formState.icon_color}
               name="icon_color"
               value={formState.icon_color}
               error={error}
@@ -360,11 +423,6 @@ export default function AdditionalPage() {
               <s-option value="right">Right</s-option>
               <s-option value="left">Left</s-option>
             </s-select>
-            <s-stack alignItems="center">
-              <s-button type="submit" variant="primary">
-                Save
-              </s-button>
-            </s-stack>
           </s-stack>
         </form>
       </s-section>
@@ -409,6 +467,7 @@ export default function AdditionalPage() {
                   width: "3em",
                   height: "3em",
                   verticalAlign: "-0.125em",
+                  fill: formState.icon_color || "#FFFFFF",
                 }}
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 640 640"

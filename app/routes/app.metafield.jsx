@@ -32,21 +32,30 @@ export const loader = async ({ request }) => {
     console.log("scrolling_settings does NOT exist");
   }
 
-  //   define a metafield
-  const DefineMetafieldresponse = await admin.graphql(CREATE_SHOP_METAFIELD, {
-    variables: {
-      definition: {
-        name: "Example Metafield",
-        namespace: "example_namespace",
-        key: "example_key",
-        description: "Dummy metafield definition for name",
-        type: "json",
-        ownerType: "SHOP",
+  try {
+    //   define a metafield
+    const DefineMetafieldresponse = await admin.graphql(CREATE_SHOP_METAFIELD, {
+      variables: {
+        definition: {
+          name: "Example Metafield",
+          namespace: "example_namespace",
+          key: "example_key",
+          description: "Dummy metafield definition for name",
+          type: "json",
+          ownerType: "SHOP",
+        },
       },
-    },
-  });
-  const defineMetafieldjson = await DefineMetafieldresponse.json();
-  console.log("Define Metafield Response:", defineMetafieldjson.data);
+    });
+    const defineMetafieldjson = await DefineMetafieldresponse.json();
+    console.log("Define Metafield Response:", defineMetafieldjson.data);
+    console.log(
+      "Code Errors: ",
+      defineMetafieldjson.data.metafieldDefinitionCreate.userErrors.code ===
+        "TAKEN",
+    );
+  } catch (error) {
+    console.error("Error initializing settings:", error);
+  }
 
   const trialData = {
     bgColor: "#da7a20ff",
@@ -60,21 +69,25 @@ export const loader = async ({ request }) => {
     showOnAll: true,
   };
 
-  const SetMetafieldresponse = await admin.graphql(SET_SHOP_METAFIELD, {
-    variables: {
-      metafields: [
-        {
-          key: "example_key",
-          namespace: "example_namespace",
-          ownerId: shopJson.data.shop.id,
-          type: "json",
-          value: JSON.stringify(trialData),
-        },
-      ],
-    },
-  });
-  const SetMetafieldjson = await SetMetafieldresponse.json();
-  console.log("Set Metafield Response:", SetMetafieldjson.data.metafieldsSet);
+  try {
+    const SetMetafieldresponse = await admin.graphql(SET_SHOP_METAFIELD, {
+      variables: {
+        metafields: [
+          {
+            key: "example_key",
+            namespace: "example_namespace",
+            ownerId: shopJson.data.shop.id,
+            type: "json",
+            value: JSON.stringify(trialData),
+          },
+        ],
+      },
+    });
+    const SetMetafieldjson = await SetMetafieldresponse.json();
+    console.log("Set Metafield Response:", SetMetafieldjson.data.metafieldsSet);
+  } catch (error) {
+    console.error("Error initializing settings:", error);
+  }
 
   return json.data.metafieldDefinitions.nodes;
 };
