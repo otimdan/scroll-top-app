@@ -36,17 +36,32 @@ export const isAppEmbedActive = async (admin) => {
   //   Checking if App embed is active
   const isAppEmbedDisabled = (parsedData, appHandle) => {
     const blocks = parsedData?.current?.blocks;
-    if (!blocks) return true; // If no blocks exist, treat as disabled.
+    if (!blocks) {
+      console.log("No blocks found in settings");
+      return true; // If no blocks exist, treat as disabled.
+    }
+
+    console.log("Checking blocks for app handle:", appHandle);
+    console.log(
+      "Available blocks:",
+      Object.values(blocks).map((b) => b.type),
+    );
 
     // Loop over block keys
     for (const blockId of Object.keys(blocks)) {
       const block = blocks[blockId];
-      if (block?.type?.includes(appHandle)) {
+      console.log("Checking block:", block.type);
+      if (
+        block?.type?.includes(appHandle) ||
+        block?.type?.includes("scroll-top-app")
+      ) {
+        console.log("Found matching block! Disabled status:", block.disabled);
         return block.disabled === true;
       }
     }
 
     // If we never found our block, assume disabled.
+    console.log("No matching block found");
     return true;
   };
 

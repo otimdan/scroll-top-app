@@ -55,7 +55,11 @@ export default function AdditionalPage() {
         <s-heading>Gettings Started</s-heading>
         <s-stack gap="large">
           <s-stack direction="inline" justifyContent="start" gap="small-300">
-            <s-icon type="check-circle-filled" />
+            {appEmbedActive ? (
+              <s-icon type="check-circle-filled" />
+            ) : (
+              <s-icon type="circle-dashed" />
+            )}
             <s-stack direction="block" gap="small-500">
               <s-heading>Activate App Embed</s-heading>
               <s-paragraph>
